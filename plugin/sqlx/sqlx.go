@@ -36,7 +36,23 @@ func (p *plugin) Generate(file *generator.FileDescriptor) {
 	}
 	p.sqlxPkg = p.NewImport("github.com/jmoiron/sqlx")
 	for _, message := range file.Messages() {
-		p.P(`func `, message.Name, `() {fmt.Println(`, p.sqlxPkg.Use(), `.NAMED)}`)
+
+		p.P(`func `, message.Name, `() {`)
+		p.P(`	fmt.Println(`, p.sqlxPkg.Use(), `.NAMED)`)
+		p.P(`	_ = "`, *message.Field[0].Name, `"`)
+
+		for _, field := range message.Field {
+			if field == nil {
+				continue
+			}
+			if field.IsString() {
+				p.P(`	_ = "string"`)
+			}
+
+		}
+
+		p.P(`}`)
+
 		//message.DescriptorProto
 
 	}

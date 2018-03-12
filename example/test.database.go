@@ -2,7 +2,7 @@
 // source: test.proto
 
 /*
-Package test is a generated protocol buffer package.
+Package example is a generated protocol buffer package.
 
 It is generated from these files:
 	test.proto
@@ -10,7 +10,7 @@ It is generated from these files:
 It has these top-level messages:
 	Test
 */
-package test
+package example
 
 import sqlx "github.com/jmoiron/sqlx"
 import proto "github.com/gogo/protobuf/proto"
@@ -22,4 +22,8 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-func test() { fmt.Println(sqlx.NAMED) }
+func test() {
+	fmt.Println(sqlx.NAMED)
+	_ = "Hello"
+	_ = "string"
+}
