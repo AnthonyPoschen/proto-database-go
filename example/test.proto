@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+message test {
+	option database = true;
+	
+	string Hello = 1;
+}
