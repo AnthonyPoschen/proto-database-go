@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package dbproto;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "dbproto";
+
+extend google.protobuf.MessageOptions {
+	optional bool sqlxdb = 64100;
+	optional string dbname = 64101;
+	optional string tablename = 64102;
+}
+
+extend google.protobuf.FieldOptions {
+	optional string colname = 65100;
+}

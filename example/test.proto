@@ -2,6 +2,22 @@ syntax = "proto3";
 
 package example;
 
-message test {	
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/zanven42/proto-database-go/dbproto/database.proto";
+
+option (gogoproto.gostring_all) = true;
+
+// test description
+message test {
+	option (gogoproto.description) = true;
+	
+	option (dbproto.sqlxdb) = true;
+	option (dbproto.dbname) = "db";
+	option (dbproto.tablename) = "table";
 	string Hello = 1; 
+	A A = 2 [(gogoproto.nullable) = false,(gogoproto.embed) = true];
+}
+
+message A {
+	string aMessage = 1;
 }

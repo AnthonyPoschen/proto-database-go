@@ -9,21 +9,25 @@ It is generated from these files:
 
 It has these top-level messages:
 	Test
+	A
 */
 package example
 
-import sqlx "github.com/jmoiron/sqlx"
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import _ "github.com/gogo/protobuf/gogoproto"
+import _ "github.com/zanven42/proto-database-go/dbproto"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-func test() {
-	fmt.Println(sqlx.NAMED)
-	_ = "Hello"
-	_ = "string"
-}
+// sqlx
+// dbName1
+// dbName2
+// db table
+//1
+var db string = "db"
+var db_table string = "table"
