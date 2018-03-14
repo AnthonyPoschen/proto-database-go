@@ -8,16 +8,16 @@ import "github.com/zanven42/proto-database-go/dbproto/database.proto";
 option (gogoproto.gostring_all) = true;
 
 // test description
-message test {
+message dbUser {
 	option (gogoproto.description) = true;
 	
 	option (dbproto.sqlxdb) = true;
 	option (dbproto.dbname) = "db";
 	option (dbproto.tablename) = "table";
-	string Hello = 1; 
-	A A = 2 [(gogoproto.nullable) = false,(gogoproto.embed) = true];
+	string hello = 1 [(dbproto.colname) = "_hello"]; 
+	apiUser apiuser = 2; 
 }
 
-message A {
-	string aMessage = 1;
+message apiUser {
+	string ID = 1 [(dbproto.colname) = "_Id"];
 }

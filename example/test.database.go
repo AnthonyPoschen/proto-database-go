@@ -8,8 +8,8 @@ It is generated from these files:
 	test.proto
 
 It has these top-level messages:
-	Test
-	A
+	DbUser
+	ApiUser
 */
 package example
 
@@ -28,6 +28,9 @@ var _ = math.Inf
 // dbName1
 // dbName2
 // db table
-//1
+// Database and Table definitions
 var db string = "db"
 var db_table string = "table"
+
+// var: Hello - DBName: _hello
+// var: Apiuser.ID - DBName: _Id

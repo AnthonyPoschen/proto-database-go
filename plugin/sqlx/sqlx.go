@@ -1,6 +1,9 @@
 package sqlx
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gogo/protobuf/gogoproto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
@@ -12,6 +15,7 @@ type plugin struct {
 	generator.PluginImports
 	sqlxPkg  generator.Single
 	dbtables map[string][]string
+	messages []*generator.Descriptor
 }
 
 type validmessage struct {
@@ -20,6 +24,11 @@ type validmessage struct {
 	table    string
 	tablevar string
 	// columns map?? // Unknown what type this should be
+}
+
+type column struct {
+	VarName      string
+	DBColumnName string
 }
 
 func init() {
@@ -46,28 +55,26 @@ func (p *plugin) Generate(file *generator.FileDescriptor) {
 		//protopkg = p.NewImport("github.com/golang/protobuf/proto")
 	}
 	p.sqlxPkg = p.NewImport("github.com/jmoiron/sqlx")
-
+	p.dbtables = map[string][]string{}
+	p.messages = file.Messages()
 	// maps lists of tables to databases for later processing
 	// do a pass purely to grab all databases and tables
 	var validMessages []validmessage
-	for _, message := range file.Messages() {
+	for _, message := range p.messages {
 		if message.Options == nil {
 			continue
 		}
 		if proto.GetBoolExtension(message.Options, dbproto.E_Sqlxdb, false) == false {
 			continue
 		}
-		p.P("// sqlx")
 		dbnameraw, err := proto.GetExtension(message.Options, dbproto.E_Dbname)
 		if err != nil {
 			continue
 		}
-		p.P("// dbName1")
 		dbname, ok := dbnameraw.(*string)
 		if !ok {
 			continue
 		}
-		p.P("// dbName2")
 		tablenameraw, err := proto.GetExtension(message.Options, dbproto.E_Tablename)
 		if err != nil {
 			continue
@@ -76,7 +83,6 @@ func (p *plugin) Generate(file *generator.FileDescriptor) {
 		if !ok {
 			continue
 		}
-		p.P("// ", *dbname, " ", *tablename)
 		p.dbtables[*dbname] = append(p.dbtables[*dbname], *tablename)
 		validMessages = append(validMessages, validmessage{Message: message, database: *dbname, table: *tablename, tablevar: *dbname + "_" + *tablename})
 	}
@@ -92,6 +98,10 @@ func (p *plugin) Generate(file *generator.FileDescriptor) {
 	}
 
 	for _, v := range validMessages {
+		cols := p.IdentifyColumns(&v)
+		for _, col := range cols {
+			p.P("// var: ", col.VarName, " - DBName: ", col.DBColumnName)
+		}
 		p.GenerateFuncs(v)
 		p.P()
 	}
@@ -99,7 +109,63 @@ func (p *plugin) Generate(file *generator.FileDescriptor) {
 
 func (p *plugin) GenerateFuncs(v validmessage) {
 	// generate New Func
-	p.P()
+
+}
+
+func (p *plugin) IdentifyColumns(v *validmessage) []column {
+	msg := v.Message
+	var columns []column
+	for _, field := range msg.Field {
+		// if this is not a basic type lets recursion in
+		ccTypeName := generator.CamelCase(field.GetName())
+
+		if field.IsMessage() {
+			p.P()
+			typeName := field.GetTypeName()
+			typeNamesplit := strings.Split(typeName, ".")
+			if len(typeNamesplit) > 0 {
+				typeName = typeNamesplit[len(typeNamesplit)-1]
+			}
+			msg, err := p.GetMessageByName(typeName)
+			if err != nil {
+				continue
+			}
+			cols := p.IdentifyColumns(&validmessage{Message: msg})
+			// append the object name to the result
+			for k, col := range cols {
+
+				col.VarName = ccTypeName + "." + col.VarName
+				cols[k] = col
+			}
+			columns = append(columns, cols...)
+			continue
+		}
+		if proto.HasExtension(field.Options, dbproto.E_Colname) == false {
+			continue
+		}
+		colnameFace, err := proto.GetExtension(field.Options, dbproto.E_Colname)
+		if err != nil {
+			continue
+		}
+		colname, ok := colnameFace.(*string)
+		if !ok {
+			continue
+		}
+		if colname == nil {
+			continue
+		}
+		columns = append(columns, column{VarName: ccTypeName, DBColumnName: *colname})
+	}
+	return columns
+}
+
+func (p *plugin) GetMessageByName(name string) (*generator.Descriptor, error) {
+	for _, msg := range p.messages {
+		if msg.GetName() == name {
+			return msg, nil
+		}
+	}
+	return nil, fmt.Errorf("Message not found")
 }
 
 //func genNewFunc(dbvar string, tablevar string, objType string)
