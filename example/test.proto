@@ -23,16 +23,15 @@ message apiUser {
 	string Name = 2 [(dbproto.colname) = "_name"];
 	string Email = 3 [(dbproto.colname) = "_email"];
 	message Query {
-		option (dbproto.query) = true;
+		option (dbproto.query) = true; // not yet defined
 		oneof field {
-			string Name = 4;
-			string Email = 5;
+			string Name = 1; // maybe define options for colname here? and run
+			string Email = 2; // any query objects through a secondary generator?
 		}
 	}
 }
 
 message apiUserGetRequest {
-	// define some weird options
 	repeated apiUser.Query Query = 1;
 }
 
