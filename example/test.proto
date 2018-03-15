@@ -14,10 +14,32 @@ message dbUser {
 	option (dbproto.sqlxdb) = true;
 	option (dbproto.dbname) = "db";
 	option (dbproto.tablename) = "table";
-	string hello = 1 [(dbproto.colname) = "_hello"]; 
-	apiUser apiuser = 2; 
+	bool staff = 1 [(dbproto.colname) = "_staff"]; 
+	apiUser apiuser = 2;
 }
 
 message apiUser {
 	string ID = 1 [(dbproto.colname) = "_Id", (dbproto.autokey) = true];
+	string Name = 2 [(dbproto.colname) = "_name"];
+	string Email = 3 [(dbproto.colname) = "_email"];
+	message Query {
+		option (dbproto.query) = true;
+		oneof field {
+			string Name = 4;
+			string Email = 5;
+		}
+	}
+}
+
+message apiUserGetRequest {
+	// define some weird options
+	repeated apiUser.Query Query = 1;
+}
+
+message apiUserGetResponse {
+	repeated apiUser users = 1;
+}
+
+service API { 
+	rpc GetUser(apiUserGetRequest) returns (apiUserGetResponse);
 }
