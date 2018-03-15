@@ -13,6 +13,8 @@ It has these top-level messages:
 */
 package example
 
+import sqlx "github.com/jmoiron/sqlx"
+import sql "database/sql"
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
@@ -24,13 +26,67 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-// sqlx
-// dbName1
-// dbName2
-// db table
-// Database and Table definitions
-var db string = "db"
-var db_table string = "table"
+type dbSearchType int
 
-// var: Hello - DBName: _hello
-// var: Apiuser.ID - DBName: _Id
+const (
+	DBS_EQUAL dbSearchType = iota
+	DBS_GREATERTHAN
+	DBS_LESSTHAN
+	DBS_WILDCARD_BOTH
+	DBS_WILDCARD_BACK
+	DBS_WILDCARD_FRONT
+	DBS_ALL
+)
+
+// DbUserInsert Handles Insert
+func DbUserInsert(db *sqlx.DB, in DbUser) (sql.Result, error) {
+	statement := "INSERT INTO db.table (_hello) VALUES (?)"
+	return db.Exec(statement, in.Hello)
+}
+
+// DbUserInsert Handles Insert
+func DbUserInsertMulti(db *sqlx.DB, in []DbUser) (results []sql.Result, errors []error) {
+	for _, v := range in {
+		res, err := DbUserInsert(db, v)
+		results = append(results, res)
+		errors = append(errors, err)
+	}
+	return
+}
+
+// DbUserUpdate Handles Update
+func DbUserUpdate(db *sqlx.DB, in DbUser) (sql.Result, error) {
+	statement := "UPDATE db.table SET _hello=? WHERE _Id=?"
+	return db.Exec(statement, in.Hello, in.Apiuser.ID)
+}
+
+// DbUserUpdate Handles Update
+func DbUserUpdateMulti(db *sqlx.DB, in []DbUser) (results []sql.Result, errors []error) {
+	for _, v := range in {
+		res, err := DbUserUpdate(db, v)
+		results = append(results, res)
+		errors = append(errors, err)
+	}
+	return
+}
+
+// DbUserDelete Handles deleting
+func DbUserDelete(db *sqlx.DB, in DbUser) (sql.Result, error) {
+	statement := "DELETE FROM db.table WHERE _Id=?"
+	return db.Exec(statement, in.Apiuser.ID)
+}
+
+// DbUserMultiDelete Handles deleting multiple
+func DbUserDeleteMulti(db *sqlx.DB, in []DbUser) (results []sql.Result, errors []error) {
+	for _, v := range in {
+		res, err := DbUserDelete(db, v)
+		results = append(results, res)
+		errors = append(errors, err)
+	}
+	return
+}
+
+// DbUserGet Handles getting
+func DbUserGet(db *sqlx.DB, column string, searchType dbSearchType, value string) (DbUser, error) {
+	return DbUser{}, nil
+}

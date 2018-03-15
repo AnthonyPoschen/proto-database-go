@@ -19,5 +19,5 @@ message dbUser {
 }
 
 message apiUser {
-	string ID = 1 [(dbproto.colname) = "_Id"];
+	string ID = 1 [(dbproto.colname) = "_Id", (dbproto.autokey) = true];
 }
