@@ -10,6 +10,9 @@ It is generated from these files:
 It has these top-level messages:
 	DbUser
 	ApiUser
+	SearchFilter
+	ApiUserGetRequest
+	ApiUserGetResponse
 */
 package example
 
@@ -18,6 +21,11 @@ import fmt "fmt"
 import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
 import _ "github.com/zanven42/proto-database-go/dbproto"
+
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -32,7 +40,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // test description
 type DbUser struct {
-	Hello   string   `protobuf:"bytes,1,opt,name=hello" json:"hello,omitempty"`
+	Staff   bool     `protobuf:"varint,1,opt,name=staff" json:"staff,omitempty"`
 	Apiuser *ApiUser `protobuf:"bytes,2,opt,name=apiuser" json:"apiuser,omitempty"`
 }
 
@@ -41,11 +49,11 @@ func (m *DbUser) String() string            { return proto.CompactTextString(m) 
 func (*DbUser) ProtoMessage()               {}
 func (*DbUser) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *DbUser) GetHello() string {
+func (m *DbUser) GetStaff() bool {
 	if m != nil {
-		return m.Hello
+		return m.Staff
 	}
-	return ""
+	return false
 }
 
 func (m *DbUser) GetApiuser() *ApiUser {
@@ -56,7 +64,9 @@ func (m *DbUser) GetApiuser() *ApiUser {
 }
 
 type ApiUser struct {
-	ID string `protobuf:"bytes,1,opt,name=ID" json:"ID,omitempty"`
+	ID    string `protobuf:"bytes,1,opt,name=ID" json:"ID,omitempty"`
+	Name  string `protobuf:"bytes,2,opt,name=Name" json:"Name,omitempty"`
+	Email string `protobuf:"bytes,3,opt,name=Email" json:"Email,omitempty"`
 }
 
 func (m *ApiUser) Reset()                    { *m = ApiUser{} }
@@ -71,29 +81,593 @@ func (m *ApiUser) GetID() string {
 	return ""
 }
 
+func (m *ApiUser) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *ApiUser) GetEmail() string {
+	if m != nil {
+		return m.Email
+	}
+	return ""
+}
+
+type ApiUser_Query struct {
+	Filter *SearchFilter `protobuf:"bytes,1,opt,name=Filter" json:"Filter,omitempty"`
+	// redefining db fields to allow custom naming for filtering
+	// but requires to re define the column names
+	//
+	// Types that are valid to be assigned to Fields:
+	//	*ApiUser_Query_ID
+	//	*ApiUser_Query_Name
+	//	*ApiUser_Query_Email
+	Fields isApiUser_Query_Fields `protobuf_oneof:"fields"`
+}
+
+func (m *ApiUser_Query) Reset()                    { *m = ApiUser_Query{} }
+func (m *ApiUser_Query) String() string            { return proto.CompactTextString(m) }
+func (*ApiUser_Query) ProtoMessage()               {}
+func (*ApiUser_Query) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 0} }
+
+type isApiUser_Query_Fields interface {
+	isApiUser_Query_Fields()
+}
+
+type ApiUser_Query_ID struct {
+	ID string `protobuf:"bytes,2,opt,name=ID,oneof"`
+}
+type ApiUser_Query_Name struct {
+	Name string `protobuf:"bytes,3,opt,name=Name,oneof"`
+}
+type ApiUser_Query_Email struct {
+	Email string `protobuf:"bytes,4,opt,name=Email,oneof"`
+}
+
+func (*ApiUser_Query_ID) isApiUser_Query_Fields()    {}
+func (*ApiUser_Query_Name) isApiUser_Query_Fields()  {}
+func (*ApiUser_Query_Email) isApiUser_Query_Fields() {}
+
+func (m *ApiUser_Query) GetFields() isApiUser_Query_Fields {
+	if m != nil {
+		return m.Fields
+	}
+	return nil
+}
+
+func (m *ApiUser_Query) GetFilter() *SearchFilter {
+	if m != nil {
+		return m.Filter
+	}
+	return nil
+}
+
+func (m *ApiUser_Query) GetID() string {
+	if x, ok := m.GetFields().(*ApiUser_Query_ID); ok {
+		return x.ID
+	}
+	return ""
+}
+
+func (m *ApiUser_Query) GetName() string {
+	if x, ok := m.GetFields().(*ApiUser_Query_Name); ok {
+		return x.Name
+	}
+	return ""
+}
+
+func (m *ApiUser_Query) GetEmail() string {
+	if x, ok := m.GetFields().(*ApiUser_Query_Email); ok {
+		return x.Email
+	}
+	return ""
+}
+
+// XXX_OneofFuncs is for the internal use of the proto package.
+func (*ApiUser_Query) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _ApiUser_Query_OneofMarshaler, _ApiUser_Query_OneofUnmarshaler, _ApiUser_Query_OneofSizer, []interface{}{
+		(*ApiUser_Query_ID)(nil),
+		(*ApiUser_Query_Name)(nil),
+		(*ApiUser_Query_Email)(nil),
+	}
+}
+
+func _ApiUser_Query_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*ApiUser_Query)
+	// fields
+	switch x := m.Fields.(type) {
+	case *ApiUser_Query_ID:
+		b.EncodeVarint(2<<3 | proto.WireBytes)
+		b.EncodeStringBytes(x.ID)
+	case *ApiUser_Query_Name:
+		b.EncodeVarint(3<<3 | proto.WireBytes)
+		b.EncodeStringBytes(x.Name)
+	case *ApiUser_Query_Email:
+		b.EncodeVarint(4<<3 | proto.WireBytes)
+		b.EncodeStringBytes(x.Email)
+	case nil:
+	default:
+		return fmt.Errorf("ApiUser_Query.Fields has unexpected type %T", x)
+	}
+	return nil
+}
+
+func _ApiUser_Query_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*ApiUser_Query)
+	switch tag {
+	case 2: // fields.ID
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeStringBytes()
+		m.Fields = &ApiUser_Query_ID{x}
+		return true, err
+	case 3: // fields.Name
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeStringBytes()
+		m.Fields = &ApiUser_Query_Name{x}
+		return true, err
+	case 4: // fields.Email
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeStringBytes()
+		m.Fields = &ApiUser_Query_Email{x}
+		return true, err
+	default:
+		return false, nil
+	}
+}
+
+func _ApiUser_Query_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*ApiUser_Query)
+	// fields
+	switch x := m.Fields.(type) {
+	case *ApiUser_Query_ID:
+		n += proto.SizeVarint(2<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(len(x.ID)))
+		n += len(x.ID)
+	case *ApiUser_Query_Name:
+		n += proto.SizeVarint(3<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(len(x.Name)))
+		n += len(x.Name)
+	case *ApiUser_Query_Email:
+		n += proto.SizeVarint(4<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(len(x.Email)))
+		n += len(x.Email)
+	case nil:
+	default:
+		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+	}
+	return n
+}
+
+type SearchFilter struct {
+	// Types that are valid to be assigned to Filter:
+	//	*SearchFilter_Equal
+	//	*SearchFilter_WildcardBoth
+	//	*SearchFilter_WildcardFront
+	//	*SearchFilter_WildcardBack
+	//	*SearchFilter_GreaterThan
+	//	*SearchFilter_LessThan
+	//	*SearchFilter_All
+	Filter isSearchFilter_Filter `protobuf_oneof:"filter"`
+}
+
+func (m *SearchFilter) Reset()                    { *m = SearchFilter{} }
+func (m *SearchFilter) String() string            { return proto.CompactTextString(m) }
+func (*SearchFilter) ProtoMessage()               {}
+func (*SearchFilter) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+type isSearchFilter_Filter interface {
+	isSearchFilter_Filter()
+}
+
+type SearchFilter_Equal struct {
+	Equal bool `protobuf:"varint,1,opt,name=equal,oneof"`
+}
+type SearchFilter_WildcardBoth struct {
+	WildcardBoth bool `protobuf:"varint,2,opt,name=wildcardBoth,oneof"`
+}
+type SearchFilter_WildcardFront struct {
+	WildcardFront bool `protobuf:"varint,3,opt,name=wildcardFront,oneof"`
+}
+type SearchFilter_WildcardBack struct {
+	WildcardBack bool `protobuf:"varint,4,opt,name=wildcardBack,oneof"`
+}
+type SearchFilter_GreaterThan struct {
+	GreaterThan bool `protobuf:"varint,5,opt,name=greaterThan,oneof"`
+}
+type SearchFilter_LessThan struct {
+	LessThan bool `protobuf:"varint,6,opt,name=lessThan,oneof"`
+}
+type SearchFilter_All struct {
+	All bool `protobuf:"varint,7,opt,name=all,oneof"`
+}
+
+func (*SearchFilter_Equal) isSearchFilter_Filter()         {}
+func (*SearchFilter_WildcardBoth) isSearchFilter_Filter()  {}
+func (*SearchFilter_WildcardFront) isSearchFilter_Filter() {}
+func (*SearchFilter_WildcardBack) isSearchFilter_Filter()  {}
+func (*SearchFilter_GreaterThan) isSearchFilter_Filter()   {}
+func (*SearchFilter_LessThan) isSearchFilter_Filter()      {}
+func (*SearchFilter_All) isSearchFilter_Filter()           {}
+
+func (m *SearchFilter) GetFilter() isSearchFilter_Filter {
+	if m != nil {
+		return m.Filter
+	}
+	return nil
+}
+
+func (m *SearchFilter) GetEqual() bool {
+	if x, ok := m.GetFilter().(*SearchFilter_Equal); ok {
+		return x.Equal
+	}
+	return false
+}
+
+func (m *SearchFilter) GetWildcardBoth() bool {
+	if x, ok := m.GetFilter().(*SearchFilter_WildcardBoth); ok {
+		return x.WildcardBoth
+	}
+	return false
+}
+
+func (m *SearchFilter) GetWildcardFront() bool {
+	if x, ok := m.GetFilter().(*SearchFilter_WildcardFront); ok {
+		return x.WildcardFront
+	}
+	return false
+}
+
+func (m *SearchFilter) GetWildcardBack() bool {
+	if x, ok := m.GetFilter().(*SearchFilter_WildcardBack); ok {
+		return x.WildcardBack
+	}
+	return false
+}
+
+func (m *SearchFilter) GetGreaterThan() bool {
+	if x, ok := m.GetFilter().(*SearchFilter_GreaterThan); ok {
+		return x.GreaterThan
+	}
+	return false
+}
+
+func (m *SearchFilter) GetLessThan() bool {
+	if x, ok := m.GetFilter().(*SearchFilter_LessThan); ok {
+		return x.LessThan
+	}
+	return false
+}
+
+func (m *SearchFilter) GetAll() bool {
+	if x, ok := m.GetFilter().(*SearchFilter_All); ok {
+		return x.All
+	}
+	return false
+}
+
+// XXX_OneofFuncs is for the internal use of the proto package.
+func (*SearchFilter) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _SearchFilter_OneofMarshaler, _SearchFilter_OneofUnmarshaler, _SearchFilter_OneofSizer, []interface{}{
+		(*SearchFilter_Equal)(nil),
+		(*SearchFilter_WildcardBoth)(nil),
+		(*SearchFilter_WildcardFront)(nil),
+		(*SearchFilter_WildcardBack)(nil),
+		(*SearchFilter_GreaterThan)(nil),
+		(*SearchFilter_LessThan)(nil),
+		(*SearchFilter_All)(nil),
+	}
+}
+
+func _SearchFilter_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*SearchFilter)
+	// filter
+	switch x := m.Filter.(type) {
+	case *SearchFilter_Equal:
+		t := uint64(0)
+		if x.Equal {
+			t = 1
+		}
+		b.EncodeVarint(1<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case *SearchFilter_WildcardBoth:
+		t := uint64(0)
+		if x.WildcardBoth {
+			t = 1
+		}
+		b.EncodeVarint(2<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case *SearchFilter_WildcardFront:
+		t := uint64(0)
+		if x.WildcardFront {
+			t = 1
+		}
+		b.EncodeVarint(3<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case *SearchFilter_WildcardBack:
+		t := uint64(0)
+		if x.WildcardBack {
+			t = 1
+		}
+		b.EncodeVarint(4<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case *SearchFilter_GreaterThan:
+		t := uint64(0)
+		if x.GreaterThan {
+			t = 1
+		}
+		b.EncodeVarint(5<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case *SearchFilter_LessThan:
+		t := uint64(0)
+		if x.LessThan {
+			t = 1
+		}
+		b.EncodeVarint(6<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case *SearchFilter_All:
+		t := uint64(0)
+		if x.All {
+			t = 1
+		}
+		b.EncodeVarint(7<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case nil:
+	default:
+		return fmt.Errorf("SearchFilter.Filter has unexpected type %T", x)
+	}
+	return nil
+}
+
+func _SearchFilter_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*SearchFilter)
+	switch tag {
+	case 1: // filter.equal
+		if wire != proto.WireVarint {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeVarint()
+		m.Filter = &SearchFilter_Equal{x != 0}
+		return true, err
+	case 2: // filter.wildcardBoth
+		if wire != proto.WireVarint {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeVarint()
+		m.Filter = &SearchFilter_WildcardBoth{x != 0}
+		return true, err
+	case 3: // filter.wildcardFront
+		if wire != proto.WireVarint {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeVarint()
+		m.Filter = &SearchFilter_WildcardFront{x != 0}
+		return true, err
+	case 4: // filter.wildcardBack
+		if wire != proto.WireVarint {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeVarint()
+		m.Filter = &SearchFilter_WildcardBack{x != 0}
+		return true, err
+	case 5: // filter.greaterThan
+		if wire != proto.WireVarint {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeVarint()
+		m.Filter = &SearchFilter_GreaterThan{x != 0}
+		return true, err
+	case 6: // filter.lessThan
+		if wire != proto.WireVarint {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeVarint()
+		m.Filter = &SearchFilter_LessThan{x != 0}
+		return true, err
+	case 7: // filter.all
+		if wire != proto.WireVarint {
+			return true, proto.ErrInternalBadWireType
+		}
+		x, err := b.DecodeVarint()
+		m.Filter = &SearchFilter_All{x != 0}
+		return true, err
+	default:
+		return false, nil
+	}
+}
+
+func _SearchFilter_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*SearchFilter)
+	// filter
+	switch x := m.Filter.(type) {
+	case *SearchFilter_Equal:
+		n += proto.SizeVarint(1<<3 | proto.WireVarint)
+		n += 1
+	case *SearchFilter_WildcardBoth:
+		n += proto.SizeVarint(2<<3 | proto.WireVarint)
+		n += 1
+	case *SearchFilter_WildcardFront:
+		n += proto.SizeVarint(3<<3 | proto.WireVarint)
+		n += 1
+	case *SearchFilter_WildcardBack:
+		n += proto.SizeVarint(4<<3 | proto.WireVarint)
+		n += 1
+	case *SearchFilter_GreaterThan:
+		n += proto.SizeVarint(5<<3 | proto.WireVarint)
+		n += 1
+	case *SearchFilter_LessThan:
+		n += proto.SizeVarint(6<<3 | proto.WireVarint)
+		n += 1
+	case *SearchFilter_All:
+		n += proto.SizeVarint(7<<3 | proto.WireVarint)
+		n += 1
+	case nil:
+	default:
+		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+	}
+	return n
+}
+
+type ApiUserGetRequest struct {
+	Query []*ApiUser_Query `protobuf:"bytes,1,rep,name=Query" json:"Query,omitempty"`
+}
+
+func (m *ApiUserGetRequest) Reset()                    { *m = ApiUserGetRequest{} }
+func (m *ApiUserGetRequest) String() string            { return proto.CompactTextString(m) }
+func (*ApiUserGetRequest) ProtoMessage()               {}
+func (*ApiUserGetRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *ApiUserGetRequest) GetQuery() []*ApiUser_Query {
+	if m != nil {
+		return m.Query
+	}
+	return nil
+}
+
+type ApiUserGetResponse struct {
+	Users []*ApiUser `protobuf:"bytes,1,rep,name=users" json:"users,omitempty"`
+}
+
+func (m *ApiUserGetResponse) Reset()                    { *m = ApiUserGetResponse{} }
+func (m *ApiUserGetResponse) String() string            { return proto.CompactTextString(m) }
+func (*ApiUserGetResponse) ProtoMessage()               {}
+func (*ApiUserGetResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *ApiUserGetResponse) GetUsers() []*ApiUser {
+	if m != nil {
+		return m.Users
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*DbUser)(nil), "example.dbUser")
 	proto.RegisterType((*ApiUser)(nil), "example.apiUser")
+	proto.RegisterType((*ApiUser_Query)(nil), "example.apiUser.Query")
+	proto.RegisterType((*SearchFilter)(nil), "example.searchFilter")
+	proto.RegisterType((*ApiUserGetRequest)(nil), "example.apiUserGetRequest")
+	proto.RegisterType((*ApiUserGetResponse)(nil), "example.apiUserGetResponse")
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// Client API for API service
+
+type APIClient interface {
+	GetUser(ctx context.Context, in *ApiUserGetRequest, opts ...grpc.CallOption) (*ApiUserGetResponse, error)
+}
+
+type aPIClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewAPIClient(cc *grpc.ClientConn) APIClient {
+	return &aPIClient{cc}
+}
+
+func (c *aPIClient) GetUser(ctx context.Context, in *ApiUserGetRequest, opts ...grpc.CallOption) (*ApiUserGetResponse, error) {
+	out := new(ApiUserGetResponse)
+	err := grpc.Invoke(ctx, "/example.API/GetUser", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for API service
+
+type APIServer interface {
+	GetUser(context.Context, *ApiUserGetRequest) (*ApiUserGetResponse, error)
+}
+
+func RegisterAPIServer(s *grpc.Server, srv APIServer) {
+	s.RegisterService(&_API_serviceDesc, srv)
+}
+
+func _API_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApiUserGetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/example.API/GetUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetUser(ctx, req.(*ApiUserGetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _API_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "example.API",
+	HandlerType: (*APIServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetUser",
+			Handler:    _API_GetUser_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "test.proto",
 }
 
 func init() { proto.RegisterFile("test.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 246 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2a, 0x49, 0x2d, 0x2e,
-	0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4f, 0xad, 0x48, 0xcc, 0x2d, 0xc8, 0x49, 0x95,
-	0xd2, 0x4d, 0xcf, 0x2c, 0xc9, 0x28, 0x4d, 0xd2, 0x4b, 0xce, 0xcf, 0xd5, 0x4f, 0xcf, 0x4f, 0xcf,
-	0xd7, 0x07, 0xcb, 0x27, 0x95, 0xa6, 0x81, 0x79, 0x60, 0x0e, 0x98, 0x05, 0xd1, 0x27, 0x65, 0x83,
-	0xa4, 0xbc, 0x2a, 0x31, 0xaf, 0x2c, 0x35, 0xcf, 0xc4, 0x08, 0xa2, 0x45, 0x37, 0x25, 0xb1, 0x24,
-	0x31, 0x29, 0xb1, 0x38, 0x55, 0x37, 0x3d, 0x5f, 0x3f, 0x25, 0x09, 0xa2, 0x13, 0x26, 0x06, 0xd1,
-	0xad, 0x94, 0xcf, 0xc5, 0x96, 0x92, 0x14, 0x5a, 0x9c, 0x5a, 0x24, 0xa4, 0xc0, 0xc5, 0x9a, 0x91,
-	0x9a, 0x93, 0x93, 0x2f, 0xc1, 0xa8, 0xc0, 0xa8, 0xc1, 0xe9, 0xc4, 0xf5, 0xe8, 0x89, 0x3c, 0x5b,
-	0x3c, 0x58, 0x24, 0x08, 0x22, 0x21, 0xa4, 0xc5, 0xc5, 0x9e, 0x58, 0x90, 0x59, 0x5a, 0x9c, 0x5a,
-	0x24, 0xc1, 0xa4, 0xc0, 0xa8, 0xc1, 0x6d, 0x24, 0xa0, 0x07, 0x75, 0xb3, 0x5e, 0x62, 0x41, 0x26,
-	0xc8, 0x90, 0x20, 0x98, 0x02, 0x2b, 0xf1, 0x0f, 0x0b, 0xe4, 0x19, 0x17, 0x2c, 0x93, 0x67, 0x5c,
-	0xb5, 0x4c, 0x9e, 0x29, 0x25, 0x69, 0xd3, 0x32, 0x79, 0xd6, 0x92, 0xc4, 0xa4, 0x9c, 0x54, 0x25,
-	0x35, 0xb0, 0x21, 0x60, 0x1b, 0xa5, 0xb9, 0x98, 0x3c, 0x5d, 0xa0, 0xd6, 0x71, 0x3f, 0x7a, 0x22,
-	0xcf, 0x1c, 0xef, 0x99, 0xf2, 0xe1, 0x89, 0x3c, 0x63, 0x10, 0x93, 0xa7, 0x8b, 0x13, 0xcb, 0x87,
-	0x87, 0x72, 0x8c, 0x49, 0x6c, 0x60, 0x57, 0x1a, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0xdc, 0x44,
-	0x94, 0x1f, 0x29, 0x01, 0x00, 0x00,
+	// 594 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x93, 0xbf, 0x6f, 0xd3, 0x4e,
+	0x18, 0xc6, 0xeb, 0x9f, 0x71, 0xcf, 0xfd, 0x4a, 0x5f, 0x4e, 0x02, 0x4c, 0x0a, 0x5c, 0xe4, 0x01,
+	0x45, 0x55, 0x9b, 0x48, 0x29, 0x53, 0xd5, 0xa5, 0x56, 0x69, 0x93, 0x05, 0x81, 0x05, 0x73, 0x74,
+	0x8e, 0xdf, 0x24, 0x56, 0x1d, 0x3b, 0xf5, 0x9d, 0xf9, 0x35, 0x31, 0x32, 0x32, 0xb2, 0x20, 0x65,
+	0x40, 0x11, 0x62, 0x84, 0x05, 0xf1, 0xdf, 0x10, 0xa5, 0x7b, 0x46, 0x46, 0xe4, 0x3b, 0xa7, 0x24,
+	0x81, 0x2d, 0xf7, 0x3e, 0xcf, 0x3d, 0xef, 0x27, 0xef, 0xbd, 0x46, 0x88, 0x03, 0xe3, 0x8d, 0x71,
+	0x96, 0xf2, 0x14, 0x57, 0xe0, 0x15, 0x1d, 0x8d, 0x63, 0xa8, 0x1e, 0x0c, 0x22, 0x3e, 0xcc, 0x83,
+	0x46, 0x2f, 0x1d, 0x35, 0x07, 0xe9, 0x20, 0x6d, 0x0a, 0x3d, 0xc8, 0xfb, 0xe2, 0x24, 0x0e, 0xe2,
+	0x97, 0xbc, 0x57, 0x3d, 0x5e, 0xb1, 0xbf, 0xa1, 0xc9, 0x0b, 0x48, 0x1e, 0xb6, 0xe4, 0x95, 0x83,
+	0x90, 0x72, 0x1a, 0x50, 0x06, 0x07, 0x83, 0xb4, 0x19, 0x06, 0xf2, 0xe6, 0xb2, 0x26, 0x6f, 0xbb,
+	0x29, 0x32, 0xc3, 0xe0, 0x39, 0x83, 0x0c, 0xd7, 0x90, 0xc1, 0x38, 0xed, 0xf7, 0x1d, 0xa5, 0xa6,
+	0xd4, 0x2d, 0x0f, 0xcd, 0xe6, 0xc4, 0xec, 0x8a, 0x8a, 0x2f, 0x05, 0xbc, 0x87, 0x2a, 0x74, 0x1c,
+	0xe5, 0x0c, 0x32, 0x47, 0xad, 0x29, 0x75, 0xbb, 0xf5, 0x7f, 0xa3, 0x64, 0x6e, 0xd0, 0x71, 0x54,
+	0x84, 0xf8, 0x4b, 0xc3, 0xd1, 0xed, 0xc5, 0x84, 0x28, 0x93, 0x29, 0x51, 0xbe, 0x4c, 0x89, 0x1a,
+	0x06, 0x5f, 0xa7, 0xc4, 0xe0, 0x34, 0x88, 0xc1, 0xfd, 0xa8, 0x8a, 0x14, 0xd1, 0x72, 0x17, 0xa9,
+	0x9d, 0x53, 0xd1, 0x6f, 0xdb, 0xb3, 0x67, 0x73, 0xa2, 0x75, 0x3b, 0xe1, 0x62, 0x4e, 0x14, 0x5f,
+	0xed, 0x9c, 0xe2, 0x7b, 0x48, 0x7f, 0x4c, 0x47, 0x20, 0x5a, 0x6d, 0x7b, 0xdb, 0xb3, 0x39, 0x31,
+	0xba, 0x09, 0x1d, 0x81, 0x2f, 0xca, 0x05, 0xee, 0xa3, 0x11, 0x8d, 0x62, 0x47, 0x13, 0xba, 0xc4,
+	0x85, 0xa2, 0xe2, 0x4b, 0xa1, 0xfa, 0x4d, 0x41, 0xc6, 0xd3, 0x1c, 0xb2, 0xd7, 0xf8, 0x10, 0x99,
+	0x67, 0x51, 0xcc, 0x21, 0x13, 0xbd, 0xec, 0xd6, 0xcd, 0x6b, 0x6e, 0x06, 0x34, 0xeb, 0x0d, 0xa5,
+	0xe8, 0xe9, 0xdf, 0xaf, 0x88, 0xe2, 0x97, 0x56, 0x7c, 0x47, 0xc0, 0xc9, 0xee, 0x95, 0x12, 0xae,
+	0xbd, 0x25, 0xd0, 0x48, 0x89, 0xa6, 0x6d, 0xa0, 0xb5, 0xb7, 0x4a, 0x38, 0x77, 0x09, 0xa7, 0x6f,
+	0xc2, 0xb5, 0xb7, 0x4a, 0xbc, 0x23, 0xfb, 0xc7, 0x94, 0x2c, 0x27, 0xe1, 0x59, 0xc8, 0xec, 0x47,
+	0x10, 0x87, 0xcc, 0xfd, 0xa4, 0xa2, 0x9d, 0x55, 0x2a, 0x7c, 0x17, 0x19, 0x70, 0x99, 0xd3, 0xb8,
+	0x7c, 0x17, 0xfd, 0xd7, 0x9c, 0x28, 0x45, 0x8a, 0x28, 0xe2, 0x3d, 0xb4, 0xf3, 0x32, 0x8a, 0xc3,
+	0x1e, 0xcd, 0x42, 0x2f, 0xe5, 0x43, 0xc1, 0x6b, 0x79, 0xfa, 0xfb, 0x2b, 0x61, 0x5a, 0xd3, 0xf0,
+	0x3e, 0xfa, 0x6f, 0x79, 0x3e, 0xcb, 0xd2, 0x84, 0x0b, 0x7e, 0xcb, 0xd3, 0x3f, 0x48, 0xf3, 0xba,
+	0xb8, 0x96, 0x4c, 0x7b, 0x17, 0xe2, 0xaf, 0x58, 0x9e, 0x3e, 0xd9, 0x4c, 0xa6, 0xbd, 0x0b, 0x5c,
+	0x47, 0xf6, 0x20, 0x03, 0xca, 0x21, 0x7b, 0x36, 0xa4, 0x89, 0x63, 0x48, 0xeb, 0x5b, 0x69, 0x5d,
+	0x95, 0xb0, 0x8b, 0xac, 0x18, 0x18, 0x13, 0x36, 0x53, 0xda, 0xde, 0x49, 0xdb, 0x75, 0x1d, 0x3b,
+	0x48, 0xa3, 0x71, 0xec, 0x54, 0xa4, 0xfc, 0x59, 0xca, 0x45, 0x49, 0x8e, 0xa9, 0x98, 0x8a, 0x7b,
+	0x82, 0x6e, 0x94, 0xb3, 0x3b, 0x07, 0xee, 0xc3, 0x65, 0x0e, 0x8c, 0xe3, 0xfd, 0xf2, 0xc1, 0x1d,
+	0xa5, 0xa6, 0xd5, 0xed, 0xd6, 0xad, 0xcd, 0xf5, 0x6c, 0x08, 0xd5, 0x97, 0x26, 0xf7, 0x18, 0xe1,
+	0xd5, 0x08, 0x36, 0x4e, 0x13, 0x06, 0xf8, 0x01, 0x32, 0x8a, 0x05, 0x66, 0x65, 0xc6, 0xdf, 0x2b,
+	0x2e, 0xe5, 0x56, 0x07, 0x69, 0x27, 0x4f, 0x3a, 0xd8, 0x43, 0x95, 0x73, 0xe0, 0x62, 0x9b, 0xab,
+	0x9b, 0xd6, 0x3f, 0x64, 0xd5, 0xdd, 0x7f, 0x6a, 0xb2, 0xa5, 0xa7, 0x2f, 0x7e, 0xde, 0x57, 0x02,
+	0x53, 0x7c, 0x90, 0x87, 0xbf, 0x03, 0x00, 0x00, 0xff, 0xff, 0x7f, 0x07, 0xfe, 0xe0, 0x14, 0x04,
+	0x00, 0x00,
 }

@@ -10,10 +10,20 @@ extend google.protobuf.MessageOptions {
 	optional bool sqlxdb = 64100;
 	optional string dbname = 64101;
 	optional string tablename = 64102;
+	optional string query = 64103;
 }
 
 extend google.protobuf.FieldOptions {
 	optional string colname = 65100;
 	optional bool key = 65101;
 	optional bool autokey = 65102;
+	optional bool filterequal = 65103;
+	optional bool filtergreaterthan = 65104;
+	optional bool filterlessthan = 65105;
+	optional bool filterwildcardboth = 65106;
+	optional bool filterwildcardfront = 65107;
+	optional bool filterwildcardback = 65108;
+	optional bool filterall = 65109;
+	optional bool filterdefault = 65110;
+	optional bool queryfilter = 65111;
 }

@@ -23,11 +23,29 @@ message apiUser {
 	string Name = 2 [(dbproto.colname) = "_name"];
 	string Email = 3 [(dbproto.colname) = "_email"];
 	message Query {
-		option (dbproto.query) = true; // not yet defined
-		oneof field {
-			string Name = 1; // maybe define options for colname here? and run
-			string Email = 2; // any query objects through a secondary generator?
+		option (dbproto.query) = "apiUser";
+		searchFilter Filter = 1 [(dbproto.queryfilter) = true];
+		
+		// redefining db fields to allow custom naming for filtering 
+		// but requires to re define the column names
+		oneof fields {
+			string ID = 2 [(dbproto.colname) = "_Id"];
+			string Name = 3 [(dbproto.colname) = "_name"];
+			string Email = 4 [(dbproto.colname) = "_email"]; 
 		}
+		
+	}
+}
+
+message searchFilter {
+	oneof filter {
+		bool equal = 1 [(dbproto.filterequal) = true]; 
+		bool wildcardBoth = 2 [(dbproto.filterwildcardboth) = true];
+		bool wildcardFront = 3 [(dbproto.filterwildcardfront) = true];
+		bool wildcardBack = 4 [(dbproto.filterwildcardback) = true];
+		bool greaterThan = 5 [(dbproto.filtergreaterthan) = true];
+		bool lessThan = 6 [(dbproto.filterlessthan) = true];
+		bool all = 7 [(dbproto.filterall) = true];
 	}
 }
 

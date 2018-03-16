@@ -10,6 +10,9 @@ It is generated from these files:
 It has these top-level messages:
 	DbUser
 	ApiUser
+	SearchFilter
+	ApiUserGetRequest
+	ApiUserGetResponse
 */
 package example
 
@@ -38,10 +41,32 @@ const (
 	DBS_ALL
 )
 
+// nested: Query
+// nested go name: ApiUser_Query
+// nested has query
+// Query name: Query
+// searchFilter
+
+// FieldVar: Fields
+// Filter varName: *ApiUser_Query_ID
+// field DB Col: _Id
+// Filter varName: *ApiUser_Query_Name
+// field DB Col: _name
+// Filter varName: *ApiUser_Query_Email
+// field DB Col: _email
+
+// FilterVar: Filter
+// filter: SearchFilter_Equal - Expr: %s = %s
+// filter: SearchFilter_WildcardBoth - Expr: %s LIKE %s%%s%%s
+// filter: SearchFilter_WildcardFront - Expr: %s LIKE %s%%s%s
+// filter: SearchFilter_WildcardBack - Expr: %s LIKE %s%s%%s
+// filter: SearchFilter_GreaterThan - Expr: %s > %s
+// filter: SearchFilter_LessThan - Expr: %s < %s
+// filter: SearchFilter_All - Expr:
 // DbUserInsert Handles Insert
 func DbUserInsert(db *sqlx.DB, in DbUser) (sql.Result, error) {
-	statement := "INSERT INTO db.table (_hello) VALUES (?)"
-	return db.Exec(statement, in.Hello)
+	statement := "INSERT INTO db.table (_staff,_name,_email) VALUES (?,?,?)"
+	return db.Exec(statement, in.Staff, in.Apiuser.Name, in.Apiuser.Email)
 }
 
 // DbUserInsert Handles Insert
@@ -56,8 +81,8 @@ func DbUserInsertMulti(db *sqlx.DB, in []DbUser) (results []sql.Result, errors [
 
 // DbUserUpdate Handles Update
 func DbUserUpdate(db *sqlx.DB, in DbUser) (sql.Result, error) {
-	statement := "UPDATE db.table SET _hello=? WHERE _Id=?"
-	return db.Exec(statement, in.Hello, in.Apiuser.ID)
+	statement := "UPDATE db.table SET _staff=?, _name=?, _email=? WHERE _Id=?"
+	return db.Exec(statement, in.Staff, in.Apiuser.Name, in.Apiuser.Email, in.Apiuser.ID)
 }
 
 // DbUserUpdate Handles Update
@@ -88,5 +113,6 @@ func DbUserDeleteMulti(db *sqlx.DB, in []DbUser) (results []sql.Result, errors [
 
 // DbUserGet Handles getting
 func DbUserGet(db *sqlx.DB, column string, searchType dbSearchType, value string) (DbUser, error) {
+	_ = "SELECT * from db.table WHERE " + column + " " + searchType + +"\"" + value + "\""
 	return DbUser{}, nil
 }
