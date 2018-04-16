@@ -113,6 +113,6 @@ func DbUserDeleteMulti(db *sqlx.DB, in []DbUser) (results []sql.Result, errors [
 
 // DbUserGet Handles getting
 func DbUserGet(db *sqlx.DB, column string, searchType dbSearchType, value string) (DbUser, error) {
-	_ = "SELECT * from db.table WHERE " + column + " " + searchType + +"\"" + value + "\""
+	_ = "SELECT * from db.table WHERE " + column + " " + searchType + "\"" + value + "\""
 	return DbUser{}, nil
 }

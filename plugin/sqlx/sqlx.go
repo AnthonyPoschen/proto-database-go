@@ -29,6 +29,13 @@ type validmessage struct {
 	// columns map?? // Unknown what type this should be
 }
 
+type table struct {
+	DBName       string
+	VarName      string
+	DatabaseName string
+	Cols         []column
+}
+
 type column struct {
 	VarName      string
 	DBColumnName string
