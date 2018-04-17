@@ -15,11 +15,10 @@ type plugin struct {
 	generator.PluginImports
 	sqlxPkg  generator.Single
 	sqlPkg   generator.Single
-	dbtables map[string][]string
 	messages []*generator.Descriptor
 }
 
-type validmessage struct {
+type dbmessage struct {
 	Message   *generator.Descriptor
 	ccMsgName string
 	database  string
@@ -88,11 +87,10 @@ func (p *plugin) Generate(file *generator.FileDescriptor) {
 	}
 	p.sqlxPkg = p.NewImport("github.com/jmoiron/sqlx")
 	p.sqlPkg = p.NewImport("database/sql")
-	p.dbtables = map[string][]string{}
 	p.messages = file.Messages()
 	// maps lists of tables to databases for later processing
 	// do a pass purely to grab all databases and tables
-	var validMessages []validmessage
+	var dbMessages []dbmessage
 	for _, message := range p.messages {
 		if message.Options == nil {
 			continue
@@ -116,25 +114,21 @@ func (p *plugin) Generate(file *generator.FileDescriptor) {
 		if !ok {
 			continue
 		}
-		p.dbtables[*dbname] = append(p.dbtables[*dbname], *tablename)
-		validMessages = append(validMessages, validmessage{Message: message, database: *dbname, table: *tablename, tablevar: *dbname + "_" + *tablename, ccMsgName: generator.CamelCase(message.GetName())})
+		dbMessages = append(dbMessages, dbmessage{Message: message, database: *dbname, table: *tablename, tablevar: *dbname + "_" + *tablename, ccMsgName: generator.CamelCase(message.GetName())})
 	}
 	// this generates the main constants that the messages build apon for their apis.
 	p.genConstants()
-	for _, v := range validMessages {
-		p.fillConfig(&v)
-
-		p.GenerateFuncs(v)
+	for _, message := range dbMessages {
+		p.fillConfig(&message)
+		p.GenerateFuncs(message)
 		p.P()
 	}
 }
 
 func (p *plugin) ParseQuery(msg *generator.Descriptor) (q query) {
-	p.P("// Query name: ", msg.GetName())
 	for _, field := range msg.Field {
 		//ccName := generator.CamelCase(field.GetName())
 		// this is for finding the field that is referencing the
-
 		if field.IsMessage() {
 			if proto.HasExtension(field.Options, dbproto.E_Queryfilter) == false {
 				continue
@@ -144,7 +138,6 @@ func (p *plugin) ParseQuery(msg *generator.Descriptor) (q query) {
 			if len(typeNamesplit) > 0 {
 				typeName = typeNamesplit[len(typeNamesplit)-1]
 			}
-			p.P(`// `, typeName)
 			msg, _ := p.GetMessageByName(typeName)
 
 			for _, filterField := range msg.GetField() {
@@ -152,12 +145,8 @@ func (p *plugin) ParseQuery(msg *generator.Descriptor) (q query) {
 					//	p.P("// oneof decl Name: ", oneof.GetName())
 					q.filterVar = generator.CamelCase(oneof.GetName())
 					//	p.P("/* one of dump: ", oneof.GoString(), "*/")
-
 				}
-				//filterField.Options
-				//p.P(`/* field dump: `, filterField.GoString(), `*/`)
-				p.P()
-				p.P()
+
 				varname := generator.CamelCase(msg.GetName()) + "_" + generator.CamelCase(filterField.GetName())
 				filterExpr := ""
 				if proto.HasExtension(filterField.Options, dbproto.E_Filterall) {
@@ -208,44 +197,33 @@ func (p *plugin) ParseQuery(msg *generator.Descriptor) (q query) {
 	return
 }
 
-func (p *plugin) fillConfig(v *validmessage) {
+func (p *plugin) fillConfig(v *dbmessage) {
+
 	// nested is where we can find our queries
 	for _, nested := range v.Message.GetNestedType() {
-
-		nestedName := generator.CamelCase(v.Message.GetName()) + "_" + generator.CamelCase(nested.GetName())
-		p.P("// nested: ", nested.GetName())
-		p.P("// nested go name: ", nestedName)
-		// if this is the query lets set it up otherwise we are going deeper in recursions
-		if proto.HasExtension(nested.Options, dbproto.E_Query) {
-			p.P("// nested has query")
-			// we only want one query type for now, to cray cray to handle multiple till one works
-			if v.cfg.Query.found {
-				continue
-			}
-			nmsg, err := p.GetMessageByName(nested.GetName())
-			if err != nil {
-				p.P("// nesgted message ", nested.GetName(), " not found")
-			}
-			query := p.ParseQuery(nmsg)
-			p.P()
-			p.P("// FieldVar: ", query.fieldVar)
-			for k, f := range query.fields {
-				query.fields[k].VarName = "*" + generator.CamelCase(v.Message.GetName()) + "_" + f.VarName
-				p.P("// Filter varName: ", query.fields[k].VarName)
-				p.P("// field DB Col: ", query.fields[k].DBColumnName)
-			}
-			p.P()
-			p.P("// FilterVar: ", query.filterVar)
-			for k, filter := range query.filters {
-				query.filters[k].varName = "*" + filter.varName
-
-				p.P("// filter: ", filter.varName, " - Expr: ", filter.filterExpression)
-			}
-			v.cfg.Query = query
+		// we only want one query type for now,crawl before you walk.
+		if v.cfg.Query.found {
+			break
+		}
+		//nestedName := generator.CamelCase(v.Message.GetName()) + "_" + generator.CamelCase(nested.GetName())
+		// if not a query lets skip this iteration check
+		if proto.HasExtension(nested.Options, dbproto.E_Query) == false {
 			continue
 		}
+		nmsg, err := p.GetMessageByName(nested.GetName())
+		if err != nil {
+			continue
+		}
+		query := p.ParseQuery(nmsg)
+		for k, f := range query.fields {
+			query.fields[k].VarName = "*" + generator.CamelCase(v.Message.GetName()) + "_" + f.VarName
+		}
+		for k, filter := range query.filters {
+			query.filters[k].varName = "*" + filter.varName
+		}
+		v.cfg.Query = query
 	}
-
+	// parse all fields and if it is a nested message
 	for _, field := range v.Message.Field {
 		// if this is not a basic type lets recursion in
 		ccTypeName := generator.CamelCase(field.GetName())
@@ -259,7 +237,7 @@ func (p *plugin) fillConfig(v *validmessage) {
 			if err != nil {
 				continue
 			}
-			recurMsg := &validmessage{Message: msg}
+			recurMsg := &dbmessage{Message: msg}
 			p.fillConfig(recurMsg)
 			// append the object name to the result
 			for k, col := range recurMsg.cfg.Columns {
@@ -268,9 +246,6 @@ func (p *plugin) fillConfig(v *validmessage) {
 				recurMsg.cfg.Columns[k] = col
 			}
 			v.cfg.Columns = append(v.cfg.Columns, recurMsg.cfg.Columns...)
-			continue
-		}
-		if proto.HasExtension(field.Options, dbproto.E_Colname) == false {
 			continue
 		}
 		colnameFace, err := proto.GetExtension(field.Options, dbproto.E_Colname)
@@ -309,7 +284,7 @@ func (p *plugin) GetMessageByName(name string) (*generator.Descriptor, error) {
 	return nil, fmt.Errorf("Message not found")
 }
 
-func (p *plugin) GenerateFuncs(v validmessage) {
+func (p *plugin) GenerateFuncs(v dbmessage) {
 	// generate constants
 	p.genMsgConstants(v, v.cfg.Columns)
 	// generate Insert Func
@@ -334,7 +309,7 @@ func (p *plugin) GenerateFuncs(v validmessage) {
 	p.genComment(v.ccMsgName+"Get", "Handles getting")
 	p.genGetFunc(v, v.cfg.Columns)
 
-	p.genGetQuery(v)
+	//p.genGetQuery(v)
 }
 
 func (p *plugin) genConstants() {
@@ -343,9 +318,9 @@ func (p *plugin) genConstants() {
 	p.P()
 	p.P(`const(`)
 	p.In()
-	p.P(`DBS_EQUAL dbSearchType = iota`)
-	p.P(`DBS_GREATERTHAN`)
-	p.P(`DBS_LESSTHAN`)
+	p.P(`DBS_EQUALS dbSearchType = iota`)
+	p.P(`DBS_GREATER_THAN`)
+	p.P(`DBS_LESS_THAN`)
 	// following emplictly change it from equal's to Like
 	p.P(`DBS_WILDCARD_BOTH`)
 	p.P(`DBS_WILDCARD_BACK`)
@@ -357,12 +332,12 @@ func (p *plugin) genConstants() {
 	p.P()
 }
 
-func (p *plugin) genMsgConstants(v validmessage, cols []column) {
+func (p *plugin) genMsgConstants(v dbmessage, cols []column) {
 	// Generate functions to get column names for each member.
 
 }
 
-func (p *plugin) genInsertFunc(v validmessage, cols []column) {
+func (p *plugin) genInsertFunc(v dbmessage, cols []column) {
 	//objNameLower := strings.ToLower(v.Message.GetName())
 	p.P(`func `, v.ccMsgName, `Insert(db *`, p.sqlxPkg.Use(), `.DB, in `, v.ccMsgName, `) (`, p.sqlPkg.Use(), `.Result, error) {`)
 	p.In()
@@ -391,7 +366,7 @@ func (p *plugin) genInsertFunc(v validmessage, cols []column) {
 	p.P(`}`)
 }
 
-func (p *plugin) genUpdateFunc(v validmessage, cols []column) {
+func (p *plugin) genUpdateFunc(v dbmessage, cols []column) {
 	// setup where field based off key's.
 	// and only asign to things that are not keys
 	var keys []column
@@ -434,7 +409,7 @@ func (p *plugin) genUpdateFunc(v validmessage, cols []column) {
 	return
 }
 
-func (p *plugin) genDeleteFunc(v validmessage, cols []column) {
+func (p *plugin) genDeleteFunc(v dbmessage, cols []column) {
 	var whereSetup string
 	var whereAssign string
 	var keys []column
@@ -460,7 +435,7 @@ func (p *plugin) genDeleteFunc(v validmessage, cols []column) {
 	p.P(`}`)
 }
 
-func (p *plugin) genGetFunc(v validmessage, cols []column) {
+func (p *plugin) genGetFunc(v dbmessage, cols []column) {
 	p.P(`func `, v.ccMsgName, `Get(db *`, p.sqlxPkg.Use(), `.DB,column string, searchType dbSearchType,value string) (`, v.ccMsgName, `, error) {`)
 	p.In()
 	p.P(`_ = "SELECT * from `, v.database, `.`, v.table, ` WHERE "+column+" "+searchType+ +"\""+value+"\""`)
